@@ -32,16 +32,27 @@ const assertPassword = (password: unknown): string => {
   return password;
 };
 
+import { Department, Designation, LeaveType } from '../models/Org';
+
 export const isSetupComplete = async (): Promise<boolean> => (await Settings.countDocuments()) > 0;
 
-interface SetupInput {
+export interface SetupInput {
   companyName?: string;
+  officeStart?: string;
+  graceMinutes?: number;
+  halfDayHours?: number;
+  weekend?: number[];
+  office?: {
+    lat?: number;
+    lng?: number;
+    radiusMeters?: number;
+  };
   adminName?: string;
   email?: string;
   password?: string;
 }
 
-/** First-run setup (functionality #01): creates the company profile and the one Admin. Only works once. */
+/** First-run setup (functionality #01): creates company profile, rules, and Master Admin. Only works once. */
 export const runFirstSetup = async (input: SetupInput) => {
   if (await isSetupComplete()) throw new AppError('Setup has already been completed.', 409);
 
@@ -52,14 +63,61 @@ export const runFirstSetup = async (input: SetupInput) => {
   if (!email || !EMAIL_RE.test(email)) throw new AppError('A valid admin email is required.', 422);
   const password = assertPassword(input.password);
 
-  await Settings.create({ companyName });
-  const admin = await User.create({ name: adminName, email, password, role: 'admin' });
+  // 1. Create company settings with office hours, grace, weekend, and geofence
+  const settings = await Settings.create({
+    companyName,
+    officeStart: input.officeStart?.trim() || '09:00',
+    graceMinutes: input.graceMinutes !== undefined ? Number(input.graceMinutes) : 15,
+    halfDayHours: input.halfDayHours !== undefined ? Number(input.halfDayHours) : 5,
+    weekend: Array.isArray(input.weekend) && input.weekend.length > 0 ? input.weekend : [0, 6],
+    office: {
+      lat: input.office?.lat !== undefined && input.office?.lat !== null ? Number(input.office.lat) : 24.8607,
+      lng: input.office?.lng !== undefined && input.office?.lng !== null ? Number(input.office.lng) : 67.0011,
+      radiusMeters: input.office?.radiusMeters !== undefined ? Number(input.office.radiusMeters) : 150,
+    },
+  });
+
+  // 2. Create Master Administrator account
+  const admin = await User.create({
+    name: adminName,
+    email,
+    password,
+    role: 'admin',
+    isActive: true,
+    mustChangePassword: false,
+  });
+
+  // 3. Provision standard starter departments, designations, and leave types
+  const starterDepts = ['Engineering', 'Human Resources', 'Operations', 'Finance'];
+  for (const d of starterDepts) {
+    await Department.findOneAndUpdate({ name: d }, { name: d }, { upsert: true });
+  }
+
+  const starterDesigs = [
+    { name: 'Senior Software Engineer' },
+    { name: 'HR Officer' },
+    { name: 'Operations Specialist' },
+    { name: 'Financial Analyst' },
+  ];
+  for (const des of starterDesigs) {
+    await Designation.findOneAndUpdate({ name: des.name }, des, { upsert: true });
+  }
+
+  const starterLeaves = [
+    { name: 'Annual', annualQuota: 14, unlimited: false, isPaid: true },
+    { name: 'Sick', annualQuota: 8, unlimited: false, isPaid: true },
+    { name: 'Casual', annualQuota: 10, unlimited: false, isPaid: true },
+    { name: 'Unpaid', annualQuota: 0, unlimited: true, isPaid: false },
+  ];
+  for (const lt of starterLeaves) {
+    await LeaveType.findOneAndUpdate({ name: lt.name }, lt, { upsert: true });
+  }
 
   await recordAudit({
     actor: { userId: admin._id.toString(), email: admin.email, role: 'admin' },
     action: 'SETUP',
     entity: 'Company',
-    after: { companyName, adminEmail: email },
+    after: { companyName, adminEmail: email, officeStart: settings.officeStart },
   });
 
   return admin;

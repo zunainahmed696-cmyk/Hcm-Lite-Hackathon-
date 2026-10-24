@@ -2,11 +2,20 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import api, { errorMessage } from '../api/axios';
 import { User, ActionResult } from '../types';
 
-interface SetupInput {
+export interface SetupInput {
   companyName: string;
   adminName: string;
   email: string;
   password: string;
+  officeStart?: string;
+  graceMinutes?: number;
+  halfDayHours?: number;
+  weekend?: number[];
+  office?: {
+    lat?: number;
+    lng?: number;
+    radiusMeters?: number;
+  };
 }
 
 interface AuthContextType {
@@ -80,9 +89,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const setup = async (input: SetupInput): Promise<ActionResult> => {
     try {
       const res = await api.post('/auth/setup', input);
-      await startSession(res.data.token);
       setSetupComplete(true);
-      return { success: true };
+      return { success: true, message: res.data?.message };
     } catch (error) {
       return { success: false, message: errorMessage(error) };
     }

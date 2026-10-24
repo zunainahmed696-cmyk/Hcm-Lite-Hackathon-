@@ -22,9 +22,12 @@ export const setupStatus = async (_req: Request, res: Response, next: NextFuncti
 
 export const setup = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { companyName, adminName, email, password } = req.body;
-    const admin = await runFirstSetup({ companyName, adminName, email, password });
-    res.status(201).json({ success: true, message: 'Company created', token: signToken(admin), user: toPublicUser(admin) });
+    const admin = await runFirstSetup(req.body);
+    res.status(201).json({
+      success: true,
+      message: 'Company setup completed successfully. Please sign in with your credentials.',
+      user: toPublicUser(admin),
+    });
   } catch (error) {
     next(error);
   }

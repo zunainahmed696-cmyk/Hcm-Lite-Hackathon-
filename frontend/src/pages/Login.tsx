@@ -9,7 +9,7 @@ export const Login: React.FC = () => {
   const { login, isAuthenticated, user, isLoading, setupComplete } = useAuth();
   const location = useLocation();
   const [params] = useSearchParams();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(params.get('email') || '');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,6 +45,11 @@ export const Login: React.FC = () => {
       footer="Employees and HR Officers sign in using credentials provisioned by administrators."
     >
       <form onSubmit={onSubmit} className="space-y-5" noValidate>
+        {params.get('registered') && !error && (
+          <Alert kind="success">
+            Company setup completed successfully! Please enter your administrator credentials to open your workspace.
+          </Alert>
+        )}
         {params.get('expired') && !error && (
           <Alert kind="info">Your session has expired. Please sign in to resume your active session.</Alert>
         )}

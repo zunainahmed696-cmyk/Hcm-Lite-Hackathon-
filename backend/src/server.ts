@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { connectDB } from './config/db';
 import authRoutes from './routes/auth.routes';
 import orgRoutes from './routes/org.routes';
+import employeeRoutes from './routes/employee.routes';
 import { errorHandler } from './middlewares/error.middleware';
 import { bootstrapFromEnv } from './services/auth.service';
 
@@ -36,6 +37,7 @@ app.get('/api/health', (_req: Request, res: Response) => {
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/org', orgRoutes);
+app.use('/api/employees', employeeRoutes);
 
 // 404 Handler for undefined API routes
 app.use((req: Request, res: Response) => {

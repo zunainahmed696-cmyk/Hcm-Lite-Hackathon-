@@ -1,5 +1,5 @@
 import {
-  LayoutDashboard, Building2, Users, Clock, CalendarDays, Wallet, Megaphone,
+  LayoutDashboard, Building2, Users, Clock, CalendarDays, Wallet,
   Bell, ScrollText, Sparkles, UserCircle, ShieldCheck, LucideIcon,
 } from 'lucide-react';
 import { UserRole } from '../types';
@@ -20,7 +20,6 @@ export interface NavItem {
 // Single source of truth for sidebar menus AND route guards (brief section 8).
 export const NAV_ITEMS: NavItem[] = [
   { path: '/dashboard', label: 'Dashboard', category: 'General', icon: LayoutDashboard, roles: ['admin', 'hr', 'employee'], phase: 'Phase 8', description: 'KPIs, trends and AI summary for your role.' },
-  { path: '/announcements', label: 'Announcements', category: 'General', icon: Megaphone, roles: ['admin', 'hr', 'employee'], phase: 'Phase 7', description: 'Company-wide notices and updates.' },
   { path: '/notifications', label: 'Notifications', category: 'General', icon: Bell, roles: ['admin', 'hr', 'employee'], phase: 'Phase 7', description: 'Leave decisions, payslips and system alerts.' },
 
   { path: '/employees', label: 'Employees', category: 'Operations', icon: Users, roles: ['admin', 'hr', 'employee'], phase: 'Phase 3', description: 'Directory, Employee 360 profile and CSV import/export.' },

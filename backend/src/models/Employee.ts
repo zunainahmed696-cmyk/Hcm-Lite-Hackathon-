@@ -13,6 +13,12 @@ export interface IEmployeeDocument extends Document {
   role: 'admin' | 'hr' | 'employee';
   dateOfJoining: string; // ISO date YYYY-MM-DD
   basicSalary: number;
+  grossSalary: number; // Virtual: 1.5 * basicSalary
+  allowances: {
+    hra: number;
+    medical: number;
+    total: number;
+  };
   status: 'active' | 'probation' | 'inactive';
   createdAt: Date;
   updatedAt: Date;
