@@ -1,0 +1,20 @@
+{
+  "name": "hackathon-mern-rbac-boilerplate",
+  "version": "1.0.0",
+  "description": "Full-stack MERN boilerplate with RBAC (Owner & User) using React, TypeScript, Tailwind CSS, Express, and Node.",
+  "scripts": {
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev"
+  },
+  "keywords": [
+    "mern",
+    "react",
+    "typescript",
+    "tailwind",
+    "express",
+    "rbac",
+    "hackathon"
+  ],
+  "author": "",
+  "license": "ISC"
+}
