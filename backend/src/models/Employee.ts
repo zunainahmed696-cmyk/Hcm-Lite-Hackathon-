@@ -125,3 +125,4 @@ EmployeeSchema.virtual('allowances').get(function (this: IEmployeeDocument) {
 });
 
 export const Employee = mongoose.model<IEmployeeDocument>('Employee', EmployeeSchema);
+export default Employee;

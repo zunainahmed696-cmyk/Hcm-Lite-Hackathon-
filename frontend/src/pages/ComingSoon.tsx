@@ -44,30 +44,24 @@ export const ComingSoon: React.FC = () => {
         {/* Admin Dashboard Preview */}
         {user.role === 'admin' && (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <StatCard
-                label="System Role Scope"
-                value="Company Root"
-                subtext="All 9 modules unlocked"
-                icon={ShieldCheck}
+                label="Attendance"
+                value="Live Monitoring"
+                subtext="Present / total & late arrival tracking"
+                icon={Clock}
               />
               <StatCard
-                label="Organization Setup"
-                value="Configured"
-                subtext="Policies, depts & leave quotas"
-                icon={Building2}
+                label="total HR"
+                value="Active Staff"
+                subtext="Provisioned HR officers"
+                icon={Users}
               />
               <StatCard
-                label="Payroll Authority"
-                value="Finalizer"
-                subtext="Only Admin locks payroll"
-                icon={Wallet}
-              />
-              <StatCard
-                label="Audit Logging"
-                value="Active"
-                subtext="Immutable before/after logs"
-                icon={CheckCircle2}
+                label="on leave"
+                value="Staff on Leave"
+                subtext="Approved & pending review requests"
+                icon={CalendarDays}
               />
             </div>
 
