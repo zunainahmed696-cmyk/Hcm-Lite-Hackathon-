@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Pencil, Plus, Trash2, X } from 'lucide-react';
+import { Pencil, Plus, Trash2, X, FolderTree } from 'lucide-react';
 import api, { errorMessage } from '../api/axios';
-import { Alert, Field, Spinner, SubmitButton } from './ui';
+import { Alert, Field, Spinner, Button, EmptyState } from './ui';
 
 export interface CatalogField {
   key: string;
@@ -99,37 +99,61 @@ export const CatalogPanel: React.FC<Props> = ({ entity, singular, fields, column
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-slate-400">{items.length} {items.length === 1 ? 'entry' : 'entries'}</p>
+    <div className="space-y-6">
+      {/* Top action bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-white">{singular} Directory</span>
+          <span className="text-xs font-mono text-slate-400 bg-surface-raised px-2 py-0.5 rounded-full border border-white/5">
+            {items.length} {items.length === 1 ? 'record' : 'records'}
+          </span>
+        </div>
         {canEdit && (
-          <button onClick={openNew} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-4 py-2 text-sm font-semibold text-white">
-            <Plus className="w-4 h-4" /> Add {singular.toLowerCase()}
-          </button>
+          <Button onClick={openNew} icon={Plus} size="sm">
+            Add {singular}
+          </Button>
         )}
       </div>
 
-      {loadError && <div className="mb-4"><Alert>{loadError}</Alert></div>}
+      {loadError && <Alert kind="error">{loadError}</Alert>}
 
+      {/* Inline Creation / Edit Form */}
       {editing && (
-        <form onSubmit={submit} className="mb-6 rounded-2xl border border-indigo-400/30 bg-slate-900/70 p-5 space-y-4" noValidate>
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-white">{editing === 'new' ? `New ${singular.toLowerCase()}` : `Edit ${singular.toLowerCase()}`}</h3>
-            <button type="button" onClick={() => setEditing(null)} aria-label="Close form" className="text-slate-400 hover:text-white"><X className="w-4 h-4" /></button>
+        <form
+          onSubmit={submit}
+          className="surface-card rounded-2xl p-6 border-brand-500/30 space-y-5"
+          noValidate
+        >
+          <div className="flex items-center justify-between pb-4 border-b border-white/5">
+            <h3 className="text-sm font-bold text-white tracking-tight">
+              {editing === 'new' ? `Create ${singular}` : `Edit ${singular}`}
+            </h3>
+            <button
+              type="button"
+              onClick={() => setEditing(null)}
+              aria-label="Close form"
+              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
           </div>
-          {formError && <Alert>{formError}</Alert>}
-          <div className="grid sm:grid-cols-2 gap-4">
+
+          {formError && <Alert kind="error">{formError}</Alert>}
+
+          <div className="grid sm:grid-cols-2 gap-5">
             {fields.map((f) =>
               f.type === 'checkbox' ? (
-                <label key={f.key} className="flex items-center gap-2.5 text-sm text-slate-200 sm:pt-6">
-                  <input
-                    type="checkbox"
-                    checked={!!values[f.key]}
-                    onChange={(e) => setValues({ ...values, [f.key]: e.target.checked })}
-                    className="w-4 h-4 accent-indigo-500"
-                  />
-                  {f.label}
-                </label>
+                <div key={f.key} className="flex items-center sm:pt-6">
+                  <label className="relative flex items-center gap-3 cursor-pointer select-none text-sm text-slate-200">
+                    <input
+                      type="checkbox"
+                      checked={!!values[f.key]}
+                      onChange={(e) => setValues({ ...values, [f.key]: e.target.checked })}
+                      className="w-4 h-4 rounded border-slate-700 bg-surface-input text-brand-600 focus:ring-brand-500"
+                    />
+                    <span className="font-medium">{f.label}</span>
+                  </label>
+                </div>
               ) : (
                 <Field
                   key={f.key}
@@ -145,40 +169,96 @@ export const CatalogPanel: React.FC<Props> = ({ entity, singular, fields, column
               )
             )}
           </div>
-          <div className="max-w-xs"><SubmitButton loading={saving}>Save</SubmitButton></div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+            <Button type="button" variant="outline" size="sm" onClick={() => setEditing(null)}>
+              Cancel
+            </Button>
+            <Button type="submit" size="sm" loading={saving}>
+              Save {singular}
+            </Button>
+          </div>
         </form>
       )}
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-800 bg-slate-900/40">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-xs uppercase tracking-wider text-slate-400 border-b border-slate-800">
-              {columns.map((c) => <th key={c.header} className="px-4 py-3 font-semibold">{c.header}</th>)}
-              {canEdit && <th className="px-4 py-3 w-24" />}
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-slate-400"><Spinner className="inline w-5 h-5 mr-2" />Loading…</td></tr>
-            ) : items.length === 0 ? (
-              <tr><td colSpan={columns.length + 1} className="px-4 py-10 text-center text-slate-500">{emptyHint}</td></tr>
-            ) : (
-              items.map((item) => (
-                <tr key={item._id} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-800/30">
-                  {columns.map((c) => <td key={c.header} className="px-4 py-3 text-slate-200">{c.render(item)}</td>)}
-                  {canEdit && (
-                    <td className="px-4 py-3">
-                      <div className="flex justify-end gap-1">
-                        <button onClick={() => openEdit(item)} aria-label="Edit" className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/60"><Pencil className="w-4 h-4" /></button>
-                        <button onClick={() => remove(item)} aria-label="Delete" className="p-2 rounded-lg text-slate-400 hover:text-rose-300 hover:bg-rose-500/10"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                    </td>
-                  )}
+      {/* Catalog Table */}
+      <div className="surface-card rounded-2xl overflow-hidden border border-white/5">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="border-b border-white/5 bg-surface-raised/50 text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">
+                {columns.map((c) => (
+                  <th key={c.header} className="px-5 py-3.5 font-semibold">
+                    {c.header}
+                  </th>
+                ))}
+                {canEdit && <th className="px-5 py-3.5 text-right">Actions</th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {loading ? (
+                <tr>
+                  <td colSpan={columns.length + (canEdit ? 1 : 0)} className="px-5 py-12 text-center text-slate-400">
+                    <Spinner className="inline w-5 h-5 mr-2 text-brand-500" />
+                    Loading records…
+                  </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={columns.length + (canEdit ? 1 : 0)} className="p-8">
+                    <EmptyState
+                      icon={FolderTree}
+                      title={`No ${singular.toLowerCase()}s recorded`}
+                      description={emptyHint}
+                      action={
+                        canEdit && (
+                          <Button onClick={openNew} icon={Plus} size="sm">
+                            Add first {singular.toLowerCase()}
+                          </Button>
+                        )
+                      }
+                    />
+                  </td>
+                </tr>
+              ) : (
+                items.map((item) => (
+                  <tr
+                    key={item._id}
+                    className="hover:bg-white/[0.02] transition-colors"
+                  >
+                    {columns.map((c) => (
+                      <td key={c.header} className="px-5 py-4 text-slate-200">
+                        {c.render(item)}
+                      </td>
+                    ))}
+                    {canEdit && (
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => openEdit(item)}
+                            title={`Edit ${singular}`}
+                            aria-label={`Edit ${singular}`}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => remove(item)}
+                            title={`Delete ${singular}`}
+                            aria-label={`Delete ${singular}`}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

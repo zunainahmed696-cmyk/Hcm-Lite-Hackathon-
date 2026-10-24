@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { MapPin } from 'lucide-react';
+import { MapPin, Building, Clock, Navigation } from 'lucide-react';
 import api, { errorMessage } from '../api/axios';
-import { Alert, Field, Spinner, SubmitButton } from './ui';
+import { Alert, Field, Spinner, Button, Card } from './ui';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -36,15 +36,34 @@ export const SettingsPanel: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   const [locating, setLocating] = useState(false);
 
   useEffect(() => {
-    api.get('/org/settings').then((r) => setForm(toForm(r.data.settings))).catch((e) => setError(errorMessage(e)));
+    api
+      .get('/org/settings')
+      .then((r) => setForm(toForm(r.data.settings)))
+      .catch((e) => setError(errorMessage(e)));
   }, []);
 
-  if (!form) return error ? <Alert>{error}</Alert> : <div className="py-10 text-center text-slate-400"><Spinner className="inline w-5 h-5 mr-2" />Loading…</div>;
+  if (!form) {
+    return error ? (
+      <Alert kind="error">{error}</Alert>
+    ) : (
+      <div className="py-12 text-center text-slate-400">
+        <Spinner className="inline w-6 h-6 mr-2 text-brand-500" /> Loading company settings…
+      </div>
+    );
+  }
 
-  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) => { setSaved(false); setForm({ ...form, [k]: e.target.value }); };
-  const toggleDay = (d: number) => {
+  const set = (k: keyof Form) => (e: React.ChangeEvent<HTMLInputElement>) => {
     setSaved(false);
-    setForm({ ...form, weekend: form.weekend.includes(d) ? form.weekend.filter((x) => x !== d) : [...form.weekend, d] });
+    setForm({ ...form, [k]: e.target.value });
+  };
+
+  const toggleDay = (d: number) => {
+    if (!canEdit) return;
+    setSaved(false);
+    setForm({
+      ...form,
+      weekend: form.weekend.includes(d) ? form.weekend.filter((x) => x !== d) : [...form.weekend, d],
+    });
   };
 
   const useMyLocation = () => {
@@ -56,7 +75,10 @@ export const SettingsPanel: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
         setLocating(false);
         setSaved(false);
       },
-      () => { setError('Could not read your location. Allow location access or type the coordinates.'); setLocating(false); },
+      () => {
+        setError('Could not read your location. Allow location access or type the coordinates.');
+        setLocating(false);
+      },
       { enableHighAccuracy: true, timeout: 10000 }
     );
   };
@@ -66,7 +88,9 @@ export const SettingsPanel: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
     setError('');
     setSaved(false);
     const hasCoords = form.lat !== '' && form.lng !== '';
-    if ((form.lat !== '') !== (form.lng !== '')) return setError('Enter both latitude and longitude, or leave both empty.');
+    if ((form.lat !== '') !== (form.lng !== '')) {
+      return setError('Enter both latitude and longitude, or leave both empty.');
+    }
     setSaving(true);
     try {
       const res = await api.put('/org/settings', {
@@ -75,7 +99,11 @@ export const SettingsPanel: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
         graceMinutes: Number(form.graceMinutes),
         halfDayHours: Number(form.halfDayHours),
         weekend: form.weekend,
-        office: { lat: hasCoords ? Number(form.lat) : null, lng: hasCoords ? Number(form.lng) : null, radiusMeters: Number(form.radiusMeters) },
+        office: {
+          lat: hasCoords ? Number(form.lat) : null,
+          lng: hasCoords ? Number(form.lng) : null,
+          radiusMeters: Number(form.radiusMeters),
+        },
       });
       setForm(toForm(res.data.settings));
       setSaved(true);
@@ -87,24 +115,73 @@ export const SettingsPanel: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
   };
 
   return (
-    <form onSubmit={submit} className="space-y-8 max-w-3xl" noValidate>
-      {error && <Alert>{error}</Alert>}
-      {saved && <Alert kind="success">Settings saved. New rules apply to new records only.</Alert>}
-      <fieldset disabled={!canEdit || saving} className="space-y-8 disabled:opacity-80">
-        <section className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-300">Company</h3>
-          <Field id="companyName" label="Company name" value={form.companyName} onChange={set('companyName')} />
-        </section>
+    <form onSubmit={submit} className="space-y-6 max-w-4xl" noValidate>
+      {error && <Alert kind="error">{error}</Alert>}
+      {saved && (
+        <Alert kind="success">
+          Settings successfully updated. Business rules apply automatically to newly recorded entries.
+        </Alert>
+      )}
 
-        <section className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-300">Working hours</h3>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Field id="officeStart" type="time" label="Office start" value={form.officeStart} onChange={set('officeStart')} />
-            <Field id="graceMinutes" type="number" min={0} label="Grace (minutes)" value={form.graceMinutes} onChange={set('graceMinutes')} />
-            <Field id="halfDayHours" type="number" min={1} step="0.5" label="Half day under (hours)" value={form.halfDayHours} onChange={set('halfDayHours')} />
+      {/* Section 1: Entity Identity */}
+      <Card
+        title="Organization Profile"
+        subtitle="Primary organization profile visible to all employees"
+      >
+        <div className="max-w-md">
+          <Field
+            id="companyName"
+            label="Legal Company Name"
+            value={form.companyName}
+            disabled={!canEdit}
+            onChange={set('companyName')}
+          />
+        </div>
+      </Card>
+
+      {/* Section 2: Attendance & Timing Policy */}
+      <Card
+        title="Working Hours & Attendance Policy"
+        subtitle="Configures daily check-in evaluations: late flags (09:15) and half-day thresholds"
+      >
+        <div className="space-y-6">
+          <div className="grid sm:grid-cols-3 gap-5">
+            <Field
+              id="officeStart"
+              type="time"
+              label="Standard Office Start"
+              hint="HH:mm format"
+              disabled={!canEdit}
+              value={form.officeStart}
+              onChange={set('officeStart')}
+            />
+            <Field
+              id="graceMinutes"
+              type="number"
+              min={0}
+              label="Grace Period (Minutes)"
+              hint="Check-in after start + grace = Late"
+              disabled={!canEdit}
+              value={form.graceMinutes}
+              onChange={set('graceMinutes')}
+            />
+            <Field
+              id="halfDayHours"
+              type="number"
+              min={1}
+              step="0.5"
+              label="Half-Day Threshold (Hours)"
+              hint="Total duration < threshold = Half Day"
+              disabled={!canEdit}
+              value={form.halfDayHours}
+              onChange={set('halfDayHours')}
+            />
           </div>
+
           <div>
-            <p className="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">Weekend</p>
+            <label className="block text-xs font-semibold tracking-wide text-slate-300 mb-2">
+              Recognized Weekend Days (Non-Working)
+            </label>
             <div className="flex flex-wrap gap-2">
               {DAYS.map((d, i) => {
                 const on = form.weekend.includes(i);
@@ -113,33 +190,92 @@ export const SettingsPanel: React.FC<{ canEdit: boolean }> = ({ canEdit }) => {
                     key={d}
                     type="button"
                     onClick={() => toggleDay(i)}
+                    disabled={!canEdit}
                     aria-pressed={on}
-                    className={`rounded-lg px-3.5 py-1.5 text-sm font-semibold border transition ${on ? 'bg-indigo-500/20 border-indigo-400/50 text-indigo-200' : 'border-slate-700 text-slate-400 hover:text-white'}`}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all duration-150 border ${
+                      on
+                        ? 'bg-brand-600 text-white border-brand-500 shadow-sm shadow-brand-600/20'
+                        : 'bg-surface-raised text-slate-400 border-white/5 hover:text-white hover:bg-white/5'
+                    } disabled:cursor-not-allowed`}
                   >
                     {d}
                   </button>
                 );
               })}
             </div>
+            <p className="mt-2 text-xs text-slate-500">
+              Attendance expectations and leave balance calculations skip these selected days.
+            </p>
           </div>
-        </section>
+        </div>
+      </Card>
 
-        <section className="space-y-4">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-indigo-300">Office location (for camera attendance)</h3>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Field id="lat" type="number" step="any" label="Latitude" placeholder="24.8607" value={form.lat} onChange={set('lat')} />
-            <Field id="lng" type="number" step="any" label="Longitude" placeholder="67.0011" value={form.lng} onChange={set('lng')} />
-            <Field id="radiusMeters" type="number" min={10} label="Radius (meters)" value={form.radiusMeters} onChange={set('radiusMeters')} />
+      {/* Section 3: Geofence for Camera Attendance */}
+      <Card
+        title="Office Geofence & Location Bounds"
+        subtitle="Defines the physical coordinates for mobile/web camera check-in verification"
+      >
+        <div className="space-y-5">
+          <div className="grid sm:grid-cols-3 gap-5">
+            <Field
+              id="lat"
+              type="number"
+              step="any"
+              label="Office Latitude"
+              placeholder="e.g. 24.8607"
+              disabled={!canEdit}
+              value={form.lat}
+              onChange={set('lat')}
+            />
+            <Field
+              id="lng"
+              type="number"
+              step="any"
+              label="Office Longitude"
+              placeholder="e.g. 67.0011"
+              disabled={!canEdit}
+              value={form.lng}
+              onChange={set('lng')}
+            />
+            <Field
+              id="radiusMeters"
+              type="number"
+              min={10}
+              label="Acceptance Radius (Meters)"
+              disabled={!canEdit}
+              value={form.radiusMeters}
+              onChange={set('radiusMeters')}
+            />
           </div>
+
           {canEdit && (
-            <button type="button" onClick={useMyLocation} disabled={locating} className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-300 hover:text-indigo-200">
-              {locating ? <Spinner className="w-4 h-4" /> : <MapPin className="w-4 h-4" />} Use my current location
-            </button>
+            <div className="flex items-center gap-3">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                icon={MapPin}
+                loading={locating}
+                onClick={useMyLocation}
+              >
+                Acquire Current Location (GPS)
+              </Button>
+            </div>
           )}
-        </section>
-      </fieldset>
+        </div>
+      </Card>
 
-      {canEdit ? <div className="max-w-xs"><SubmitButton id="settings-save" loading={saving}>Save settings</SubmitButton></div> : <p className="text-xs text-slate-500">Only the Admin can change company settings.</p>}
+      {canEdit ? (
+        <div className="pt-2">
+          <Button type="submit" loading={saving}>
+            Save Organization Settings
+          </Button>
+        </div>
+      ) : (
+        <p className="text-xs text-slate-500 font-mono">
+          Settings are governed at the company level by Administrators.
+        </p>
+      )}
     </form>
   );
 };
